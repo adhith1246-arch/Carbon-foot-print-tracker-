@@ -1,22 +1,10 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.py" },
-    { "src": "/css/(.*)", "dest": "frontend/css/$1" },
-    { "src": "/js/(.*)", "dest": "frontend/js/$1" },
-    { "src": "/login.html", "dest": "frontend/login.html" },
-    { "src": "/(.*\\.ico)", "dest": "frontend/$1" },
-    { "src": "^/$", "dest": "frontend/index.html" },
-    { "src": "/(.*)", "dest": "api/index.py" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/css/(.*)", "destination": "/frontend/css/$1" },
+    { "source": "/js/(.*)", "destination": "/frontend/js/$1" },
+    { "source": "/login.html", "destination": "/frontend/login.html" },
+    { "source": "/(.*\\.ico)", "destination": "/frontend/$1" },
+    { "source": "/", "destination": "/frontend/index.html" }
   ]
 }
