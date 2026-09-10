@@ -1,10 +1,9 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/css/(.*)", "destination": "/frontend/css/$1" },
-    { "source": "/js/(.*)", "destination": "/frontend/js/$1" },
-    { "source": "/login.html", "destination": "/frontend/login.html" },
-    { "source": "/(.*\\.ico)", "destination": "/frontend/$1" },
-    { "source": "/", "destination": "/frontend/index.html" }
+    { "source": "/css/(.*)", "destination": "/css/$1" },
+    { "source": "/js/(.*)", "destination": "/js/$1" },
+    { "source": "/login.html", "destination": "/login.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
