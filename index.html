@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Carbon Tracker — IIT Bombay</title>
+  <meta name="description" content="Real-time Campus Carbon Footprint Tracker for IIT Bombay. Monitor CO₂ emissions across hostels and departments." />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+
+<!-- Greenery Particle Canvas -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ══════════════════════════════════════
+     SIDEBAR NAVIGATION
+══════════════════════════════════════ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌿</div>
+    <div class="logo-text">
+      <h2>GreenCampus</h2>
+      <span>IIT Bombay · 2026</span>
+    </div>
+  </div>
+
+  <div class="nav-label">Main Menu</div>
+
+  <a class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+  <a class="nav-item" id="nav-leaderboard" onclick="showPage('leaderboard')">
+    <span class="nav-icon">🏆</span> Leaderboard
+  </a>
+  <a class="nav-item" id="nav-suggestions" onclick="showPage('suggestions')">
+    <span class="nav-icon">💡</span> Suggestions
+  </a>
+  <a class="nav-item" id="nav-admin" onclick="showPage('admin')">
+    <span class="nav-icon">⚙️</span> Admin Panel
+  </a>
+
+  <div style="margin-top: 16px; margin-bottom: 8px;" class="nav-label">Info</div>
+  <a class="nav-item" id="nav-about" onclick="showPage('about')">
+    <span class="nav-icon">🎯</span> SDG Alignment
+  </a>
+
+  <div style="margin-top: 16px; margin-bottom: 8px;" class="nav-label">Actions</div>
+  <a class="nav-item" href="/api/export/excel" style="color:#38bdf8;">
+    <span class="nav-icon">📥</span> Export Excel
+  </a>
+  <a class="nav-item" onclick="handleLogout()" style="color:#ff6b81;cursor:pointer;">
+    <span class="nav-icon">🚪</span> Logout
+  </a>
+
+  <div class="sidebar-footer">
+    <p>🌍 Campus Target</p>
+    <span>Reduce 20% CO₂ by Dec 2026</span>
+    <div id="user-greeting" style="margin-top:8px;font-size:10px;color:rgba(240,244,255,0.5);"></div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     MAIN CONTENT AREA
+══════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ─── D3 TOOLTIP ─── -->
+  <div class="d3-tooltip" id="tooltip"></div>
+
+  <!-- ════════════════════════════════════
+       PAGE 1: DASHBOARD
+  ════════════════════════════════════ -->
+  <div class="page active" id="page-dashboard">
+
+    <div class="page-header">
+      <div class="page-title">
+        <h1>🌍 Carbon Dashboard</h1>
+        <p>Real-time emissions tracking · IIT Bombay Campus</p>
+      </div>
+      <div class="header-badge">
+        <div class="live-dot"></div>
+        Live Today · <span id="current-date"></span>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon green">⚡</div>
+        <div class="stat-value green" id="stat-total">0</div>
+        <div class="stat-label">Total CO₂ Today (kg)</div>
+        <div class="stat-change up" id="stat-total-change">↑ +8.3% from yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">🏭</div>
+        <div class="stat-value red" id="stat-elec">0</div>
+        <div class="stat-label">Electricity Emissions (kg)</div>
+        <div class="stat-change up">↑ Highest source today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">🚗</div>
+        <div class="stat-value blue" id="stat-vehicle">0</div>
+        <div class="stat-label">Transport Emissions (kg)</div>
+        <div class="stat-change down">↓ −4.1% from yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange">🍽️</div>
+        <div class="stat-value orange" id="stat-food">0</div>
+        <div class="stat-label">Food & Waste Emissions (kg)</div>
+        <div class="stat-change up">↑ High food waste today</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-grid">
+      <!-- Donut Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">CO₂ by Source</div>
+            <div class="chart-subtitle">Today's emission breakdown</div>
+          </div>
+          <span class="chart-badge">Today</span>
+        </div>
+        <div class="donut-wrapper" id="donut-wrapper">
+          <svg id="donut-chart" width="180" height="180"></svg>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+
+      <!-- Bar Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Department Emissions</div>
+            <div class="chart-subtitle">CO₂ comparison this week</div>
+          </div>
+          <span class="chart-badge">This Week</span>
+        </div>
+        <svg id="bar-chart" width="100%" height="220"></svg>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="bottom-grid">
+
+      <!-- Line Trend -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">30-Day CO₂ Trend</div>
+            <div class="chart-subtitle">Campus-wide daily emissions</div>
+          </div>
+          <span class="chart-badge" style="background:rgba(0,212,255,0.15);color:var(--teal)">30 Days</span>
+        </div>
+        <svg id="line-chart" width="100%" height="180"></svg>
+      </div>
+
+      <!-- Today's Suggestions -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">💡 Smart Suggestions</div>
+            <div class="chart-subtitle">Actions to reduce emissions now</div>
+          </div>
+        </div>
+        <div class="suggestions-list" id="dashboard-suggestions"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE 2: LEADERBOARD
+  ════════════════════════════════════ -->
+  <div class="page" id="page-leaderboard">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>🏆 Sustainability Leaderboard</h1>
+        <p>Departments ranked by lowest CO₂ emissions this week</p>
+      </div>
+      <div class="header-badge">
+        <div class="live-dot"></div>
+        Weekly Rankings
+      </div>
+    </div>
+
+    <!-- Top 3 Trophies -->
+    <div class="full-lb-grid" id="trophy-grid"></div>
+
+    <!-- Full Table -->
+    <div class="full-lb-table">
+      <div class="table-header">
+        <span>Rank</span>
+        <span>Department</span>
+        <span>Total CO₂ (kg)</span>
+        <span>Daily Avg (kg)</span>
+        <span>vs. Target</span>
+        <span>Status</span>
+      </div>
+      <div id="lb-table-body"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE 3: SUGGESTIONS
+  ════════════════════════════════════ -->
+  <div class="page" id="page-suggestions">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>💡 Smart Suggestions</h1>
+        <p>AI-generated actions to cut campus emissions today</p>
+      </div>
+      <div class="header-badge">
+        <div class="live-dot"></div>
+        <span id="suggestion-saving-badge">Loading...</span>
+      </div>
+    </div>
+
+    <div class="suggestions-page-grid" id="suggestions-page-grid"></div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE 4: ADMIN PANEL
+  ════════════════════════════════════ -->
+  <div class="page" id="page-admin">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>⚙️ Admin Panel</h1>
+        <p>Submit daily emission readings for your department</p>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+      <!-- Form -->
+      <div class="form-card">
+        <h3>📋 Submit Daily Data</h3>
+
+        <div class="form-group">
+          <label class="form-label">Department / Hostel</label>
+          <select class="form-select" id="dept-select">
+            <option value="">Select Department</option>
+            <option>H1 Hostel</option>
+            <option>H4 Hostel</option>
+            <option>H5 Hostel</option>
+            <option>H7 Hostel</option>
+            <option>H10 Hostel</option>
+            <option>Main Building</option>
+            <option>Lecture Hall Complex</option>
+            <option>Library</option>
+            <option>Sports Complex</option>
+            <option>Canteen</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="date-input" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Electricity Used (kWh)</label>
+            <input type="number" class="form-input" id="elec-input" placeholder="e.g. 450" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Diesel Used (litres)</label>
+            <input type="number" class="form-input" id="diesel-input" placeholder="e.g. 20" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Vehicles Entered</label>
+            <input type="number" class="form-input" id="vehicles-input" placeholder="e.g. 35" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Water Used (kL)</label>
+            <input type="number" class="form-input" id="water-input" placeholder="e.g. 50" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Veg Meals Served</label>
+            <input type="number" class="form-input" id="veg-input" placeholder="e.g. 200" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Non-Veg Meals Served</label>
+            <input type="number" class="form-input" id="nonveg-input" placeholder="e.g. 80" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Food Waste (kg)</label>
+          <input type="number" class="form-input" id="foodwaste-input" placeholder="e.g. 15" />
+        </div>
+
+        <button class="btn-submit" onclick="submitData()">Submit Reading →</button>
+
+        <div class="success-toast" id="success-toast">
+          ✅ Data submitted! CO₂ updated on dashboard.
+        </div>
+      </div>
+
+      <!-- Recent Submissions -->
+      <div>
+        <div class="form-card" style="margin-bottom:20px;">
+          <h3>⚡ Live CO₂ Preview</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+            Estimated CO₂ based on your current inputs
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="co2-preview-grid">
+            <div class="impact-pill">
+              <div class="val" id="prev-elec">0</div>
+              <div class="lbl">Electricity kg CO₂</div>
+            </div>
+            <div class="impact-pill">
+              <div class="val" id="prev-vehicle">0</div>
+              <div class="lbl">Transport kg CO₂</div>
+            </div>
+            <div class="impact-pill">
+              <div class="val" id="prev-food">0</div>
+              <div class="lbl">Food kg CO₂</div>
+            </div>
+            <div class="impact-pill" style="background:var(--green-dim);">
+              <div class="val" id="prev-total" style="color:var(--green)">0</div>
+              <div class="lbl" style="color:var(--green)">Total kg CO₂</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3>📜 Recent Submissions</h3>
+          <div class="recent-list" id="recent-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       PAGE 5: SDG ABOUT
+  ════════════════════════════════════ -->
+  <div class="page" id="page-about">
+    <div class="page-header">
+      <div class="page-title">
+        <h1>🎯 SDG Alignment</h1>
+        <p>How GreenCampus contributes to UN Sustainable Development Goals</p>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:28px;">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Project Impact Summary</div>
+          <div class="chart-subtitle">IIT Bombay Campus · 2026</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:8px;">
+        <div style="text-align:center;">
+          <div style="font-size:36px;font-weight:900;color:var(--green);">12K+</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Students Impacted</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:36px;font-weight:900;color:var(--teal);">40+</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Departments Tracked</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:36px;font-weight:900;color:var(--orange);">20%</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">CO₂ Reduction Target</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:36px;font-weight:900;color:var(--purple);">₹8L</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Estimated Annual Savings</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sdg-grid">
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 7</div>
+        <div class="sdg-title">Affordable & Clean Energy</div>
+        <div class="sdg-desc">By identifying high-electricity zones, we help shift IIT Bombay toward renewable sources and reduce grid dependency.</div>
+      </div>
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 11</div>
+        <div class="sdg-title">Sustainable Cities</div>
+        <div class="sdg-desc">A model campus carbon tracker that can be replicated across all major Indian universities and cities.</div>
+      </div>
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 12</div>
+        <div class="sdg-title">Responsible Consumption</div>
+        <div class="sdg-desc">Canteen food waste tracking directly reduces consumption inefficiencies and inspires behavioural change.</div>
+      </div>
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 13</div>
+        <div class="sdg-title">Climate Action</div>
+        <div class="sdg-desc">Real-time CO₂ monitoring creates data-driven accountability — the first step to meaningful climate action.</div>
+      </div>
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 4</div>
+        <div class="sdg-title">Quality Education</div>
+        <div class="sdg-desc">Students and faculty are educated about their carbon impact, fostering a generation of sustainability-aware leaders.</div>
+      </div>
+      <div class="sdg-card">
+        <div class="sdg-num">SDG 17</div>
+        <div class="sdg-title">Partnerships for Goals</div>
+        <div class="sdg-desc">The platform enables collaboration between departments, hostels, and campus administration toward shared sustainability goals.</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script src="js/particles.js"></script>
+</body>
+</html>
